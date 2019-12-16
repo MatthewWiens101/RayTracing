@@ -4,3 +4,5 @@ Just for fun.
 
 All work originally adapted from "Ray Tracing in One Weekend" by Peter Shirley.
 Special thanks to Roger Allen's article which was extremely useful in adaptation to CUDA.
+
+Open result.ppm in a ppm editor such as gimp to view the result at each step.
