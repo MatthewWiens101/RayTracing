@@ -5,9 +5,9 @@
 
 // TODO technically this only works for rectangular prisms so name is a misnomer
 // cube order below:
+//			4
+//	2	3	0	1
 //			5
-//	3	4	1	2
-//			6
 
 class prism : public hitable {
 public:
@@ -35,10 +35,16 @@ public:
 };
 
 __device__ bool prism::hit(const ray& r, float tmin, float tmax, hit_record& rec) const {
+	hit_record temp = rec;
+	float min_t = FLT_MAX;
 	for (int i = 0; i < 6; i++) {
-		if (faces[i].hit(r, tmin, tmax, rec)) {
-			return true;
+		if (faces[i].hit(r, tmin, tmax, temp)) {
+			if (temp.t < min_t) {
+				min_t = temp.t;
+				rec = temp;
+			}
 		}
 	}
-	return false;
+	if(min_t == FLT_MAX) return false;
+	return true;
 }

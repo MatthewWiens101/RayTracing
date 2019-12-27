@@ -15,6 +15,7 @@
 #include "gpuErrchk.h"
 #include "sphere.h"
 #include "prism.h"
+#include "pyramid.h"
 #include "hitableList.h"
 #include "camera.h"
 #include "material.h"
@@ -92,11 +93,14 @@ __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_cam
 		d_list[3] = new sphere(vec3(1.25, 0, -2), 0.5, new lambertian(vec3(0.8, 0.3, 0.3)));
 		d_list[4] = new sphere(vec3(-1.25, 0, -2), 0.5, new metal(vec3(0.6, 0.2, 0.8), 0.0));
 		*d_world = new hitable_list(d_list, 5);*/
-		d_list[0] = new sphere(vec3(0, -100.5, -2), 100, new metal(vec3(0.8, 0.8, 0.8), 0.0));
-		d_list[1] = new prism(vec3(0, 0, -1), vec3(0, 1, 0), unit_vector(vec3(1, 0, 1)), 1, 1, 1, new lambertian(vec3(0.8, 0.8, 0.8)));
-		*d_world = new hitable_list(d_list, 2);
-		vec3 lookfrom = vec3(0, 3, 5);
-		vec3 lookat = vec3(0, 0, -1);
+		d_list[0] = new sphere(vec3(0, -101, 0), 100, new metal(vec3(0.8, 0.8, 0.8), 0.0));
+		d_list[1] = new prism(vec3(0, 0, -1), vec3(0, 1, 0), vec3(0, 0, 1), 1, 1, 1, new dielectric(1.7));
+		d_list[2] = new tetrahedral(vec3(0, 0, 1), vec3(0, 1, 0), vec3(0, 0, 1), 1, new lambertian(vec3(0.3, 0.3, 0.3)));
+		d_list[3] = new sphere(vec3(1.25, 0, -1), 0.5, new lambertian(vec3(0.8, 0.3, 0.3)));
+		d_list[4] = new sphere(vec3(-1.25, 0, -1), 0.5, new metal(vec3(0.6, 0.2, 0.8), 0.0));
+		*d_world = new hitable_list(d_list, 5);
+		vec3 lookfrom = vec3(3, 3, 3);
+		vec3 lookat = vec3(0, 0, 0);
 		float dist_to_focus = (lookfrom - lookat).length();
 		float aperture = 0.0;
 		*d_camera = new camera(lookfrom, lookat, vec3(0, 1, 0), 45, float(nx) / float(ny), aperture, dist_to_focus);
@@ -140,7 +144,7 @@ int main() {
 
 	int nx = 1920;
 	int ny = 1080;
-	int ns = 500;
+	int ns = 200;
 	outfile << nx << " " << ny << "\n255\n";
 
 	int num_pixels = nx * ny;
@@ -156,7 +160,7 @@ int main() {
 	curandState* d_rand_state;
 	gpuErrchk(cudaMalloc(&d_rand_state, num_pixels * sizeof(curandState)));
 
-	int list_length = 2;
+	int list_length = 5;
 	size_t list_size = list_length * sizeof(hitable *);
 	hitable** d_list;
 	gpuErrchk(cudaMalloc(&d_list, list_size));
