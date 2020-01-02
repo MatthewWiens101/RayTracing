@@ -6,12 +6,12 @@
 class tetrahedral : public hitable {
 public:
 	__device__ tetrahedral();
-	__device__ tetrahedral(vec3 cen, vec3 t, vec3 fr, float l_radius, material* mater) : center(cen), top(t), front(fr), mat_ptr(mater) {
+	__device__ tetrahedral(vec3 cen, vec3 t, vec3 fr, float cube_length, material* mater) : center(cen), top(t), front(fr), mat_ptr(mater) {
 		top.make_unit_vector();
 		front.make_unit_vector();
 		side = cross(top, front);
 		side.make_unit_vector();
-		float length = l_radius / sqrt(3.0);
+		float length = cube_length / 2;
 		// TODO may need to make additional functions for rectangle and triangle (ie. like the vec3 class)
 		faces[0] = triangle(cen - top * length + front * length - side * length, cen + top * length + front * length + side * length, cen + top * length - front * length - side * length, mater);
 		faces[1] = triangle(cen - top * length - front * length + side * length, cen + top * length - front * length - side * length, cen + top * length + front * length + side * length, mater);

@@ -87,19 +87,12 @@ __global__ void render(vec3* fb, const int nx, const int ny, const int ns, const
 
 __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_camera, const int nx, const int ny) {
 	if (threadIdx.x == 0 && blockIdx.x == 0) {
-		/*d_list[0] = new sphere(vec3(0, -100.5, -1), 100, new lambertian(vec3(0.8, 0.8, 0.8)));
-		d_list[1] =  new sphere(vec3(0, 0, -1), 0.5, new dielectric(1.7));
-		d_list[2] = new sphere(vec3(0, 0, -3), 0.5, new metal(vec3(0.8, 0.8, 0.8), 0.2));
-		d_list[3] = new sphere(vec3(1.25, 0, -2), 0.5, new lambertian(vec3(0.8, 0.3, 0.3)));
-		d_list[4] = new sphere(vec3(-1.25, 0, -2), 0.5, new metal(vec3(0.6, 0.2, 0.8), 0.0));
-		*d_world = new hitable_list(d_list, 5);*/
 		d_list[0] = new sphere(vec3(0, -101, 0), 100, new metal(vec3(0.8, 0.8, 0.8), 0.0));
-		d_list[1] = new prism(vec3(0, 0, -1), vec3(0, 1, 0), vec3(0, 0, 1), 1, 1, 1, new dielectric(1.7));
-		d_list[2] = new tetrahedral(vec3(0, 0, 1), vec3(0, 1, 0), vec3(0, 0, 1), 1, new lambertian(vec3(0.3, 0.3, 0.3)));
-		d_list[3] = new sphere(vec3(1.25, 0, -1), 0.5, new lambertian(vec3(0.8, 0.3, 0.3)));
-		d_list[4] = new sphere(vec3(-1.25, 0, -1), 0.5, new metal(vec3(0.6, 0.2, 0.8), 0.0));
-		*d_world = new hitable_list(d_list, 5);
-		vec3 lookfrom = vec3(3, 3, 3);
+		d_list[1] = new tetrahedral(vec3(0, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1), 1, new lambertian(vec3(0.3, 0.3, 0.3)));
+		d_list[2] = new sphere(vec3(1.25, 0, -1), 0.5, new lambertian(vec3(0.8, 0.3, 0.3)));
+		d_list[3] = new sphere(vec3(-1.25, 0, -1), 0.5, new metal(vec3(0.6, 0.2, 0.8), 0.0));
+		*d_world = new hitable_list(d_list, 4);
+		vec3 lookfrom = vec3(5, 5, 5);
 		vec3 lookat = vec3(0, 0, 0);
 		float dist_to_focus = (lookfrom - lookat).length();
 		float aperture = 0.0;
@@ -108,20 +101,14 @@ __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_cam
 }
 
 __global__ void free_world(hitable** d_list, hitable** d_world, camera** d_camera) {
-	/*delete ((sphere*)d_list[0])->mat_ptr;
-	delete ((sphere*)d_list[1])->mat_ptr;
+	delete ((sphere*)d_list[0])->mat_ptr;
+	delete ((prism*)d_list[1])->mat_ptr;
 	delete ((sphere*)d_list[2])->mat_ptr;
 	delete ((sphere*)d_list[3])->mat_ptr;
-	delete ((sphere*)d_list[4])->mat_ptr;
 	delete d_list[0];
 	delete d_list[1];
 	delete d_list[2];
 	delete d_list[3];
-	delete d_list[4];*/
-	delete ((sphere*)d_list[0])->mat_ptr;
-	delete ((prism*)d_list[1])->mat_ptr;
-	delete d_list[0];
-	delete d_list[1];
 	delete *d_world;
 	delete* d_camera;
 }
@@ -133,19 +120,14 @@ int main() {
 	int maxBlocksize2d = 32;
 	size_t* val = new(size_t);
 	cudaDeviceGetLimit(val, cudaLimitStackSize);
-	printf("stack limit: %d\n", *val);
+	fprintf(stderr, "stack limit: %d\n", *val);
 	*val = 32768;
 	gpuErrchk(cudaDeviceSetLimit(cudaLimitStackSize, *val));
-	printf("set stack limit to %d\n", *val);
+	fprintf(stderr, "set stack limit to %d\n", *val);
 
-	ofstream outfile;
-	outfile.open("result.ppm");
-	outfile << "P3\n";
-
-	int nx = 1920;
-	int ny = 1080;
-	int ns = 200;
-	outfile << nx << " " << ny << "\n255\n";
+	int nx = 1024;
+	int ny = 512;
+	int ns = 100;
 
 	int num_pixels = nx * ny;
 	int num_iterations = DIV_ROUNDUP(DIV_ROUNDUP(ns, 100) * num_pixels, 512*256);
@@ -160,7 +142,7 @@ int main() {
 	curandState* d_rand_state;
 	gpuErrchk(cudaMalloc(&d_rand_state, num_pixels * sizeof(curandState)));
 
-	int list_length = 5;
+	int list_length = 4;
 	size_t list_size = list_length * sizeof(hitable *);
 	hitable** d_list;
 	gpuErrchk(cudaMalloc(&d_list, list_size));
@@ -183,13 +165,13 @@ int main() {
 	if (blocksPerGridI.x > 16) {
 		blocksPerGridI.x = 16;
 	}
-	printf("launching init kernel <<<16, %d>>> %d times\n", threadsPerBlockI.x, DIV_ROUNDUP(blocksItemp, 16));
+	fprintf(stderr, "launching init kernel <<<16, %d>>> %d times\n", threadsPerBlockI.x, DIV_ROUNDUP(blocksItemp, 16));
 	for (int i = 0; i < blocksItemp; i += 16) {
 		if (blocksItemp - i < 16)
 			blocksPerGridI.x = blocksItemp - i;
 		render_init <<<blocksPerGridI, threadsPerBlockI>>> (nx, ny, i * maxBlocksize2d * maxBlocksize2d, d_rand_state);
 		gpuErrchk(cudaDeviceSynchronize());
-		printf("%d/%d\n", i, blocksItemp);
+		fprintf(stderr, "%d/%d\n", i, blocksItemp);
 	}
 	gpuErrchk(cudaDeviceSynchronize());
 	clock_t end1 = clock();
@@ -204,18 +186,22 @@ int main() {
 		threadsPerBlock.y = maxBlocksize2d;
 		blocksPerGrid.y = (ny + threadsPerBlock.y - 1) / threadsPerBlock.y;
 	}
-	printf("launching full kernel <<<(%d, %d), (%d, %d)>>> %d times\n", blocksPerGrid.x, blocksPerGrid.y, threadsPerBlock.x, threadsPerBlock.y, num_iterations);
+	fprintf(stderr, "launching full kernel <<<(%d, %d), (%d, %d)>>> %d times\n", blocksPerGrid.x, blocksPerGrid.y, threadsPerBlock.x, threadsPerBlock.y, num_iterations);
 	for (int iteration = 0; iteration < num_iterations; iteration++) {
 		render<<<blocksPerGrid, threadsPerBlock>>>(fb_d, nx, ny, ns_per_iteration, ns_per_iteration*iteration, d_camera, d_world, d_rand_state);
 		// TODO got here, memory issue, likely in accessing pointers within the prism hit function
 		gpuErrchk(cudaDeviceSynchronize());
-		printf("%d/%d\n", iteration, num_iterations);
+		fprintf(stderr, "%d/%d\n", iteration, num_iterations);
 	}
 	gpuErrchk(cudaDeviceSynchronize());
 	gpuErrchk(cudaMemcpy(fb_h, fb_d, fb_size, cudaMemcpyDeviceToHost));
 
 	clock_t end2 = clock();
 
+	ofstream outfile;
+	outfile.open("result.ppm");
+	outfile << "P3\n";
+	outfile << nx << " " << ny << "\n255\n";
 	for (int j = ny - 1; j >= 0; j--) {
 		for (int i = 0; i < nx; i++) {
 			int pixel_index = j * nx + i;

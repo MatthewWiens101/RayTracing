@@ -9,12 +9,13 @@ class triangle : public hitable {
 public:
 	__device__ triangle() : normal(vec3()), origin(vec3()), vert1(vec3()), vert2(vec3()), vert3(vec3()), mat_ptr(nullptr) {};
 	__device__ triangle(vec3 n, vec3 p1, vec3 p2, vec3 p3, material* mater) : normal(n), vert1(p1), vert2(p2), vert3(p3), mat_ptr(mater) {
-		vec3 origin = (p1 + p2 + p3) / 3;
+		normal.make_unit_vector();
+		origin = (p1 + p2 + p3) / 3;
 	};
 	__device__ triangle(vec3 p1, vec3 p2, vec3 p3, material* mater) : vert1(p1), vert2(p2), vert3(p3), mat_ptr(mater) {
-		vec3 normal = cross(p3 - p1, p2 - p1);
+		normal = -1*cross(vert3 - vert1, vert2 - vert1);
 		normal.make_unit_vector();
-		vec3 origin = (p1 + p2 + p3) / 3;
+		origin = (vert1 + vert2 + vert3) / 3;
 	};
 	__device__ virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec) const;
 	vec3 normal;
@@ -32,15 +33,16 @@ public:
 // However it is not known if this will work for equilateral or acute triangles
 // This is some logic error that is not checking something properly, but what?
 __device__ bool triangle::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
-	vec3 u = vert2 - vert1;
-	vec3 v = vert3 - vert1;
 	vec3 oc = vert1 - r.origin();
 	float t = dot(normal, oc) / dot(normal, r.direction());
 	vec3 intersect = r.point_at_parameter(t);
-	vec3 P = intersect - vert1;
-	float us = dot(P, u) / u.squared_length();
-	float vs = dot(P, v) / v.squared_length();
-	if ((0 <= us) && (us <= 1) && (0 <= vs) && (vs <= 1) && (us + vs <= 1)) {
+	vec3 uA = cross(vert2 - vert1, intersect - vert1);
+	vec3 vA = cross(vert3 - vert2, intersect - vert2);
+	vec3 wA = cross(vert1 - vert3, intersect - vert3);
+	bool ub = dot(uA, normal) > 0;
+	bool vb = dot(vA, normal) > 0;
+	bool wb = dot(wA, normal) > 0;
+	if ((ub == vb) && (ub == wb)) {
 		if (t < t_max && t > t_min) {
 			rec.t = t;
 			rec.p = r.point_at_parameter(rec.t);
