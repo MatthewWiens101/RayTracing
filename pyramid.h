@@ -2,6 +2,7 @@
 
 #include "hitable.h"
 #include "triangle.h"
+#include "mat3.h"
 
 class tetrahedral : public hitable {
 public:

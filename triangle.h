@@ -13,7 +13,7 @@ public:
 		origin = (p1 + p2 + p3) / 3;
 	};
 	__device__ triangle(vec3 p1, vec3 p2, vec3 p3, material* mater) : vert1(p1), vert2(p2), vert3(p3), mat_ptr(mater) {
-		normal = -1*cross(vert3 - vert1, vert2 - vert1);
+		normal = cross(vert2 - vert1, vert3 - vert1);
 		normal.make_unit_vector();
 		origin = (vert1 + vert2 + vert3) / 3;
 	};

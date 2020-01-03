@@ -88,11 +88,11 @@ __global__ void render(vec3* fb, const int nx, const int ny, const int ns, const
 __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_camera, const int nx, const int ny) {
 	if (threadIdx.x == 0 && blockIdx.x == 0) {
 		d_list[0] = new sphere(vec3(0, -101, 0), 100, new metal(vec3(0.8, 0.8, 0.8), 0.0));
-		d_list[1] = new tetrahedral(vec3(0, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1), 1, new lambertian(vec3(0.3, 0.3, 0.3)));
-		d_list[2] = new sphere(vec3(1.25, 0, -1), 0.5, new lambertian(vec3(0.8, 0.3, 0.3)));
+		d_list[1] = new prism(vec3(0, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1), 1, 1, 1, new lambertian(vec3(0.3, 0.3, 0.3)));
+		d_list[2] = new sphere(vec3(1.25, 0, -1), 0.5, new polish(vec3(0.8, 0.3, 0.3), 1.7));
 		d_list[3] = new sphere(vec3(-1.25, 0, -1), 0.5, new metal(vec3(0.6, 0.2, 0.8), 0.0));
 		*d_world = new hitable_list(d_list, 4);
-		vec3 lookfrom = vec3(5, 5, 5);
+		vec3 lookfrom = vec3(3, 3, 3);
 		vec3 lookat = vec3(0, 0, 0);
 		float dist_to_focus = (lookfrom - lookat).length();
 		float aperture = 0.0;
@@ -127,7 +127,7 @@ int main() {
 
 	int nx = 1024;
 	int ny = 512;
-	int ns = 100;
+	int ns = 500;
 
 	int num_pixels = nx * ny;
 	int num_iterations = DIV_ROUNDUP(DIV_ROUNDUP(ns, 100) * num_pixels, 512*256);

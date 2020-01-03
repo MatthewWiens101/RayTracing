@@ -54,6 +54,30 @@ public:
 	vec3 albedo;
 };
 
+class polish : public material {
+public:
+	__device__ polish(const vec3& a, float ri) : albedo(a), ref_idx(ri) {};
+	__device__ virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered, curandState* rand_state) const {
+		vec3 reflected = reflect(r_in.direction(), rec.normal);
+		vec3 diffused = rec.normal + random_in_unit_sphere(rand_state);
+		attenuation = vec3(1.0, 1.0, 1.0);
+		float cosine = -dot(r_in.direction(), rec.normal) / r_in.direction().length();
+		vec3 refracted;
+		float reflect_prob;
+		reflect_prob = schlick(cosine, ref_idx);
+		if (curand_uniform(rand_state) < reflect_prob) {
+			scattered = ray(rec.p, reflected);
+		}
+		else {
+			scattered = ray(rec.p, diffused);
+			attenuation = albedo;
+		}
+		return true;
+	}
+	vec3 albedo;
+	float ref_idx;
+};
+
 class metal : public material {
 public:
 	__device__ metal(const vec3& a, float f) : albedo(a), fuzz(f) {}
