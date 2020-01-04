@@ -284,3 +284,8 @@ __host__ __device__ inline mat3 rotation_matrix(vec3 u, float theta) {
 	float e8 = cos(theta) + u.e[2] * u.e[2] * (1 - cos(theta));
 	return mat3(e0, e1, e2, e3, e4, e5, e6, e7, e8);
 }
+
+__host__ __device__ inline mat3 rotation_matrix_d(const vec3& u, float theta_d) {
+	float theta = theta_d * M_PI / 180;
+	return rotation_matrix(u, theta);
+}
