@@ -16,6 +16,7 @@
 #include "sphere.h"
 #include "prism.h"
 #include "pyramid.h"
+#include "icosahedron.h"
 #include "hitableList.h"
 #include "camera.h"
 #include "material.h"
@@ -90,11 +91,11 @@ __global__ void render(vec3* fb, const int nx, const int ny, const int ns, const
 __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_camera, const int nx, const int ny) {
 	if (threadIdx.x == 0 && blockIdx.x == 0) {
 		d_list[0] = new sphere(vec3(0, -101, 0), 100, new metal(vec3(0.8, 0.8, 0.8), 0.0));
-		d_list[1] = new sphere(vec3(1.25, 0, -1), 0.5, new polish(vec3(0.8, 0.3, 0.3), 1.7));
-		d_list[2] = new sphere(vec3(-1.25, 0, -1), 0.5, new lambertian(vec3(0.6, 0.2, 0.8)));
-		d_list[3] = new tetrahedral(vec3(0, 0, -1), vec3(0, 1, 0), vec3(0, 0, 1), 1, new metal(vec3(0.3, 0.3, 0.3), 0.0), TET_PLCHLDR);
+		d_list[1] = new sphere(vec3(0.5, 0, -2), 0.5, new polish(vec3(0.8, 0.3, 0.3), 1.7));
+		d_list[2] = new sphere(vec3(-0.5, 0, -2), 0.5, new lambertian(vec3(0.6, 0.2, 0.8)));
+		d_list[3] = new icosahedron(vec3(0, 0, -1), vec3(0, 1, 0), vec3(0, 0, 1), 0.5, new dielectric(1.5));
 		*d_world = new hitable_list(d_list, NUM_OBJS);
-		vec3 lookfrom = vec3(-0.5, 2.5, -3.5);
+		vec3 lookfrom = vec3(0, 0, 2);
 		vec3 lookat = vec3(0, 0, -1);
 		float dist_to_focus = (lookfrom - lookat).length();
 		float aperture = 0.0;
@@ -127,9 +128,9 @@ int main() {
 	gpuErrchk(cudaDeviceSetLimit(cudaLimitStackSize, *val));
 	fprintf(stderr, "set stack limit to %d\n", *val);
 
-	int nx = 1024;
-	int ny = 512;
-	int ns = 100;
+	int nx = 1920;
+	int ny = 1080;
+	int ns = 1000;
 
 	int num_pixels = nx * ny;
 	int num_iterations = DIV_ROUNDUP(DIV_ROUNDUP(ns, 100) * num_pixels, 512*256);
