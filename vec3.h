@@ -154,3 +154,7 @@ __host__ __device__ inline vec3 unit_vector(const vec3& v) {
 	float k = 1.0 / sqrt(v.e[0] * v.e[0] + v.e[1] * v.e[1] + v.e[2] * v.e[2]);
 	return vec3(v.e[0] * k, v.e[1] * k, v.e[2] * k);
 }
+
+__host__ __device__ inline vec3 pow(const vec3& v, float power) {
+	return vec3(pow(v.e[0], power), pow(v.e[1], power), pow(v.e[2], power));
+}

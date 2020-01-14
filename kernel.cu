@@ -53,8 +53,11 @@ __device__ vec3 color(const ray& r, hitable **world, curandState *rand_state) {
 		}
 		else {
 			vec3 unit_direction = unit_vector(cur_ray.direction());
-			float t = 0.5 * (unit_direction.y() + 1.0);
-			vec3 c = (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+			//float t = 0.5 * (unit_direction.y() + 1.0);
+			//vec3 c = (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+			float t = unit_direction.y();
+			//vec3 c = (t > 0.95) ? vec3(1.0, 1.0, 1.0) : (1.0 - t) * vec3(0.25, 0.25, 0.25) + t * vec3(0.125, 0.175, 0.25);
+			vec3 c = (t > 0.95) ? vec3(1.0, 1.0, 1.0) : vec3(0.0, 0.0, 0.0);
 			return cur_attenuation * c;
 		}
 	}
@@ -69,7 +72,7 @@ __global__ void render_init(const int nx, const int ny, const int offset, curand
 	curand_init(1984, INDoffset, 0, local_rand_state);
 }
 
-__global__ void render(vec3* fb, const int nx, const int ny, const int ns, const int nsi, camera** cam, hitable ** world, curandState * rand_state) {
+__global__ void render(vec3* fb, const int nx, const int ny, const int ns, const int nsi, camera** cam, float gamma, hitable ** world, curandState * rand_state) {
 	int COL = blockIdx.x * blockDim.x + threadIdx.x;
 	int ROW = blockIdx.y * blockDim.y + threadIdx.y;
 	if (ROW >= ny || COL >= nx) return;
@@ -81,7 +84,8 @@ __global__ void render(vec3* fb, const int nx, const int ny, const int ns, const
 		float u = float(COL + curand_uniform(local_rand_state)) / float(nx);
 		float v = float(ROW + curand_uniform(local_rand_state)) / float(ny);
 		r = (*cam)->get_ray(u, v, local_rand_state);
-		col += (color(r, world, local_rand_state)-col)/float(s+1);
+		vec3 col_int = color(r, world, local_rand_state); // TODO could place this at the end for a single computation, might have use here later on though
+		col += (pow(col_int, gamma)-col)/float(s+1);
 	}
 	fb[ROW * nx + COL] = col;
 }
@@ -90,7 +94,7 @@ __global__ void render(vec3* fb, const int nx, const int ny, const int ns, const
 
 __global__ void create_world(hitable** d_list, hitable** d_world, camera** d_camera, const int nx, const int ny) {
 	if (threadIdx.x == 0 && blockIdx.x == 0) {
-		d_list[0] = new sphere(vec3(0, -101, 0), 100, new metal(vec3(0.8, 0.8, 0.8), 0.0));
+		d_list[0] = new sphere(vec3(0, -100.5, 0), 100, new lambertian(vec3(0.8, 0.8, 0.8)));
 		d_list[1] = new sphere(vec3(0.5, 0, -2), 0.5, new polish(vec3(0.8, 0.3, 0.3), 1.7));
 		d_list[2] = new sphere(vec3(-0.5, 0, -2), 0.5, new lambertian(vec3(0.6, 0.2, 0.8)));
 		d_list[3] = new icosahedron(vec3(0, 0, -1), vec3(0, 1, 0), vec3(0, 0, 1), 0.5, new dielectric(1.5));
@@ -131,6 +135,7 @@ int main() {
 	int nx = 1920;
 	int ny = 1080;
 	int ns = 1000;
+	float gamma = 0.5;
 
 	int num_pixels = nx * ny;
 	int num_iterations = DIV_ROUNDUP(DIV_ROUNDUP(ns, 100) * num_pixels, 512*256);
@@ -191,7 +196,7 @@ int main() {
 	}
 	fprintf(stderr, "launching full kernel <<<(%d, %d), (%d, %d)>>> %d times\n", blocksPerGrid.x, blocksPerGrid.y, threadsPerBlock.x, threadsPerBlock.y, num_iterations);
 	for (int iteration = 0; iteration < num_iterations; iteration++) {
-		render<<<blocksPerGrid, threadsPerBlock>>>(fb_d, nx, ny, ns_per_iteration, ns_per_iteration*iteration, d_camera, d_world, d_rand_state);
+		render<<<blocksPerGrid, threadsPerBlock>>>(fb_d, nx, ny, ns_per_iteration, ns_per_iteration*iteration, d_camera, gamma, d_world, d_rand_state);
 		// TODO got here, memory issue, likely in accessing pointers within the prism hit function
 		gpuErrchk(cudaDeviceSynchronize());
 		fprintf(stderr, "%d/%d\n", iteration, num_iterations);
